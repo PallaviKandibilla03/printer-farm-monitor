@@ -1,31 +1,100 @@
 from fastapi import FastAPI
+
 from models import SensorReading
+from detector import DetectionEngine
+from state_manager import StateManager
+from alert_manager import AlertManager
+from aggregator import Aggregator
+from cloud_sender import CloudSender
+from logger import logger
 
-app = FastAPI(title="3D Printer Fog Node")
+app = FastAPI(
+    title="3D Printer Fog Node",
+    version="1.0"
+)
 
-# Store the latest reading for each printer
-latest_readings = {}
+# ----------------------------------------------------
+# Services
+# ----------------------------------------------------
+
+state_manager = StateManager()
+alert_manager = AlertManager()
+aggregator = Aggregator()
+cloud_sender = CloudSender()
 
 
 @app.get("/")
 def home():
     return {
-        "message": "3D Printer Fog Node Running"
+        "service": "3D Printer Fog Node",
+        "status": "Running",
+        "version": "1.0"
     }
 
 
 @app.post("/sensor-data")
 def receive_sensor_data(reading: SensorReading):
+    """
+    Main processing pipeline for incoming sensor data.
+    """
 
-    latest_readings[reading.printer_id] = reading
+    logger.info(
+        f"Received reading from {reading.printer_id}"
+    )
 
-    print("\n====================================")
-    print(f"Printer: {reading.printer_id}")
-    print(f"Nozzle Temp : {reading.nozzle_temp} °C")
-    print(f"Bed Temp    : {reading.bed_temp} °C")
-    print(f"Vibration   : {reading.vibration}")
-    print(f"Flow        : {reading.flow}")
-    print("====================================")
+    # ------------------------------------------------
+    # Update latest printer state
+    # ------------------------------------------------
+
+    state_manager.update_reading(
+        reading.printer_id,
+        reading
+    )
+
+    # ------------------------------------------------
+    # Detect failures
+    # ------------------------------------------------
+
+    alert = DetectionEngine.detect(reading)
+
+    # ------------------------------------------------
+    # Process alert lifecycle
+    # ------------------------------------------------
+
+    event_type, event = alert_manager.process(
+        reading.printer_id,
+        alert
+    )
+
+    # ------------------------------------------------
+    # Aggregate healthy readings
+    # ------------------------------------------------
+
+    summary = aggregator.add(
+        reading,
+        alert
+    )
+
+    # ------------------------------------------------
+    # Send events to cloud
+    # ------------------------------------------------
+
+    if event_type == "NEW_ALERT":
+        cloud_sender.send_alert(event)
+
+    elif event_type == "RECOVERY":
+        cloud_sender.send_recovery(event)
+
+    # ------------------------------------------------
+    # Send healthy summaries
+    # ------------------------------------------------
+
+    if summary:
+        cloud_sender.send_summary(summary)
+
+    logger.info(
+        f"Finished processing {reading.printer_id}"
+    )
 
     return {
         "status": "received",
@@ -35,4 +104,8 @@ def receive_sensor_data(reading: SensorReading):
 
 @app.get("/printers")
 def get_printers():
-    return latest_readings
+    """
+    Returns the latest reading for every printer.
+    """
+
+    return state_manager.get_latest()
