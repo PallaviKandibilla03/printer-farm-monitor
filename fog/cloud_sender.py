@@ -1,41 +1,85 @@
-"""
-Cloud Communication Layer
+import json
 
-Placeholder for AWS SQS.
-"""
+import boto3
 
-from models import AlertEvent
 from logger import logger
+from aws_config import (
+    AWS_REGION,
+    AWS_PROFILE,
+    QUEUE_URL,
+)
 
 
 class CloudSender:
 
-    def send_alert(
-        self,
-        alert: AlertEvent,
-    ):
+    def __init__(self):
 
-        logger.info(
-            f"[Cloud] Alert queued: "
-            f"{alert.printer_id} | "
-            f"{alert.type.value}"
+        session = boto3.Session(
+            profile_name=AWS_PROFILE,
+            region_name=AWS_REGION,
         )
 
-    def send_recovery(
-        self,
-        alert: AlertEvent,
-    ):
+        self.sqs = session.client("sqs")
 
-        logger.info(
-            f"[Cloud] Recovery queued: "
-            f"{alert.printer_id}"
+    # ------------------------------------
+
+    def send_alert(self, alert):
+
+        response = self.sqs.send_message(
+
+            QueueUrl=QUEUE_URL,
+
+            MessageBody=json.dumps(
+                alert.model_dump(mode="json")
+            ),
+
         )
 
-    def send_summary(
-        self,
-        summary,
-    ):
+        logger.info(
+            f"[AWS] Alert sent "
+            f"{response['MessageId']}"
+        )
+
+    # ------------------------------------
+
+    def send_recovery(self, alert):
+
+        payload = {
+
+            "printer_id": alert.printer_id,
+
+            "event": "RECOVERY",
+
+            "timestamp": str(alert.timestamp),
+
+        }
+
+        response = self.sqs.send_message(
+
+            QueueUrl=QUEUE_URL,
+
+            MessageBody=json.dumps(payload),
+
+        )
 
         logger.info(
-            "[Cloud] Healthy summary queued."
+            f"[AWS] Recovery sent "
+            f"{response['MessageId']}"
+        )
+
+    # ------------------------------------
+
+    def send_summary(self, summary):
+
+        response = self.sqs.send_message(
+
+            QueueUrl=QUEUE_URL,
+
+            MessageBody=json.dumps(summary),
+
+        )
+
+        logger.info(
+            f"[AWS] Summary sent "
+            f"{response['MessageId']}"
         )
