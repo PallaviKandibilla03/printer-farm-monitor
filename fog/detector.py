@@ -9,7 +9,7 @@ Input:
 Output:
     AlertEvent | None
 """
-
+from datetime import datetime
 import uuid
 
 from models import (
@@ -55,7 +55,7 @@ class DetectionEngine:
 
             event_id=str(uuid.uuid4()),
 
-            timestamp=reading.timestamp,
+            timestamp=datetime.utcnow(),
 
             source=EventSource.FOG_NODE,
 

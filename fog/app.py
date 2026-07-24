@@ -22,16 +22,6 @@ alert_manager = AlertManager()
 aggregator = Aggregator()
 cloud_sender = CloudSender()
 
-
-@app.get("/")
-def home():
-    return {
-        "service": "3D Printer Fog Node",
-        "status": "Running",
-        "version": "1.0"
-    }
-
-
 @app.post("/sensor-data")
 def receive_sensor_data(reading: SensorReading):
     """
@@ -80,10 +70,35 @@ def receive_sensor_data(reading: SensorReading):
     # ------------------------------------------------
 
     if event_type == "NEW_ALERT":
+
+        logger.info(
+            f"Sending ALERT for {reading.printer_id}"
+        )
+
         cloud_sender.send_alert(event)
 
     elif event_type == "RECOVERY":
+
+        logger.info(
+            f"Sending RECOVERY for {reading.printer_id}"
+        )
+
         cloud_sender.send_recovery(event)
+
+    elif event_type == "ALERT_CHANGED":
+
+        previous_alert, new_alert = event
+
+        logger.info(
+            f"{reading.printer_id}: "
+            f"{previous_alert.type.value} -> {new_alert.type.value}"
+        )
+
+        # Close previous alert
+        cloud_sender.send_recovery(previous_alert)
+
+        # Raise new alert
+        cloud_sender.send_alert(new_alert)
 
     # ------------------------------------------------
     # Send healthy summaries
@@ -100,12 +115,3 @@ def receive_sensor_data(reading: SensorReading):
         "status": "received",
         "printer": reading.printer_id
     }
-
-
-@app.get("/printers")
-def get_printers():
-    """
-    Returns the latest reading for every printer.
-    """
-
-    return state_manager.get_latest()

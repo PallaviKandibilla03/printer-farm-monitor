@@ -439,22 +439,49 @@ st.markdown("---")
 # RECENT EVENTS
 # ---------------------------------------------------
 
+# ---------------------------------------------------
+# RECENT EVENTS
+# ---------------------------------------------------
+
 st.markdown(
     f'<div class="section-title">{icon("pulse", ACCENT_2)} Latest Events</div>',
     unsafe_allow_html=True,
 )
 
 if not events_df.empty:
-    recent = events_df.copy()
-    recent = recent.sort_values("timestamp", ascending=False).head(15)
 
-    cols_to_show = [
-        c for c in ["timestamp", "printer_id", "type", "severity", "message"]
-        if c in recent.columns
+    recent = events_df.copy()
+
+    recent["timestamp"] = pd.to_datetime(
+        recent["timestamp"],
+        errors="coerce"
+    )
+
+    recent = (
+        recent
+        .dropna(subset=["timestamp"])
+        .sort_values("timestamp", ascending=False)
+        .reset_index(drop=True)
+    )
+
+    columns = [
+        "timestamp",
+        "printer_id",
+        "event",
+        "type",
+        "severity",
+        "message",
     ]
 
+    columns = [c for c in columns if c in recent.columns]
+
     with st.container(border=True):
-        st.dataframe(recent[cols_to_show], hide_index=True, use_container_width=True)
+        st.dataframe(
+            recent[columns],
+            hide_index=True,
+            use_container_width=True,
+        )
+
 else:
     st.info("No recent events.")
 

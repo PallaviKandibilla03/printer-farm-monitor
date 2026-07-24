@@ -27,6 +27,7 @@ class AlertManager:
 
         ("NEW_ALERT", alert)
         ("RECOVERY", previous_alert)
+        ("ALERT_CHANGED", (previous_alert, new_alert))
         (None, None)
         """
 
@@ -62,15 +63,34 @@ class AlertManager:
 
         if previous:
 
+            # Same alert still active
             if previous.type == alert.type:
-
                 return (
                     None,
                     None,
                 )
 
+            # Different alert detected
+            logger.info(
+                f"🔄 {printer_id} changed from "
+                f"{previous.type.value} "
+                f"to "
+                f"{alert.type.value}"
+            )
+
+            # Replace active alert
+            self.active_alerts[printer_id] = alert
+
+            return (
+                "ALERT_CHANGED",
+                (
+                    previous,
+                    alert,
+                ),
+            )
+
         # ----------------------------------
-        # New Alert
+        # First Alert
         # ----------------------------------
 
         self.active_alerts[printer_id] = alert
