@@ -4,7 +4,6 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime
 from aws_config import (
-    AWS_PROFILE,
     AWS_REGION,
     STATUS_TABLE,
     EVENTS_TABLE,
@@ -278,7 +277,7 @@ div[data-testid="stDataFrame"]{{
 # ---------------------------------------------------
 
 session = boto3.Session(
-    profile_name=AWS_PROFILE,
+
     region_name=AWS_REGION
 )
 

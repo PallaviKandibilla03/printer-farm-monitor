@@ -6,7 +6,6 @@ import boto3
 from logger import logger
 from aws_config import (
     AWS_REGION,
-    AWS_PROFILE,
     QUEUE_URL,
 )
 
@@ -16,7 +15,7 @@ class CloudSender:
     def __init__(self):
 
         session = boto3.Session(
-            profile_name=AWS_PROFILE,
+            
             region_name=AWS_REGION,
         )
 
