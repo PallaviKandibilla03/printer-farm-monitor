@@ -98,7 +98,7 @@ The AWS layer consists of:
 ### 1. Clone the repository
 
 ```bash
-git clone <repo>
+git clone https://github.com/PallaviKandibilla03/printer-farm-monitor
 cd printer-farm-monitor
 ```
 
